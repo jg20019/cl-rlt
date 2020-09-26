@@ -5,12 +5,26 @@
 (defparameter *screen-width* 80)
 (defparameter *screen-height* 50)
 
+(defclass entity ()
+  ((x :initarg :x :accessor entity/x)
+   (y :initarg :y :accessor entity/y)
+   (char :initarg :char :accessor entity/char)
+   (color :initarg :color :accessor entity/color)))
 
-(defun draw (player-x player-y)
+(defmethod move ((e entity) dx dy)
+  (incf (entity/x e) dx)
+  (incf (entity/y e) dy))
+
+(defmethod draw ((e entity))
+  (with-slots (x y char color) e
+    (setf (blt:color) color
+	  (blt:cell-char x y) char)))
+
+(defun render-all (entities)
   (blt:clear)
-  (setf (blt:color) (blt:white)
-	(blt:cell-char player-x player-y) #\@)
+  (mapc #'draw entities)
   (blt:refresh))
+
 
 (defun handle-keys ()
   (let ((action nil))
@@ -34,18 +48,28 @@
   (blt:with-terminal
     (config)
     (loop
-       :with player-x = (/ *screen-width* 2)
-       :and player-y = (/ *screen-height* 2)
+       :with player = (make-instance 'entity
+				     :x (/ *screen-width* 2)
+				     :y (/ *screen-height* 2)
+				     :char #\@
+				     :color (blt:white))
+       :and npc = (make-instance 'entity
+				 :x (- (/ *screen-width* 2) 5)
+				 :y (/ *screen-height* 2)
+				 :char #\@
+				 :color (blt:yellow))
+	 
+       :with entities = (list player npc) 
        :do
-	 (draw player-x player-y)
+	 (render-all entities)
 	 (let* ((action (handle-keys))
 		(move (getf action :move))
 		(exit (getf action :quit)))
 	   (if exit
 	       (return)
 	       (when move
-		 (incf player-x (car move))
-		 (incf player-y (cdr move))))))))
+		 (move player (car move) (cdr move))))))))
+
 	 
 	 
 	    
